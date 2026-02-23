@@ -124,6 +124,9 @@ contract Bank {
         uint256 balance = balances[msg.sender];
         uint256 fee = amount * transactionFeePercentage / 100;
 
+        if (balance < amount + fee) {
+            revert InsufficientBalance();
+        }
         if (balance - amount - fee < minBalance) {
             revert MinBalanceNotMet();
         }
@@ -150,6 +153,10 @@ contract Bank {
 
         uint256 balance = balances[msg.sender];
         uint256 fee = amount * transactionFeePercentage / 100;
+
+        if (balance < amount + fee) {
+            revert InsufficientBalance();
+        }
         if (balance - amount - fee < minBalance) {
             revert MinBalanceNotMet();
         }
