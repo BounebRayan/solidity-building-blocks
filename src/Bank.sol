@@ -24,14 +24,14 @@ contract Bank {
     modifier onlyOwner() {
         _onlyOwner();
         _;
-     }
- 
+    }
+
     /// @notice Internal function to only allow the owner to call the function
     function _onlyOwner() internal view {
         if (msg.sender != owner) {
             revert NotOwner();
         }
-   }
+    }
 
     /// @notice Deposit ETH into the bank
     function deposit() public payable {
@@ -61,7 +61,7 @@ contract Bank {
 
         balances[msg.sender] -= amount;
 
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        (bool success,) = payable(msg.sender).call{value: amount}("");
         if (!success) {
             revert TransactionFailed();
         }
