@@ -2,7 +2,9 @@
 pragma solidity ^0.8.13;
 
 contract SharedWallet {
-    event ProposalCreated(uint256 indexed id, address indexed proposer, address indexed to, uint256 amount, string description);
+    event ProposalCreated(
+        uint256 indexed id, address indexed proposer, address indexed to, uint256 amount, string description
+    );
     event ProposalApproved(uint256 indexed id, address indexed approver);
     event ProposalExecuted(uint256 indexed id, address indexed to, uint256 amount);
 
@@ -29,7 +31,7 @@ contract SharedWallet {
     error InvalidThreshold();
     error InvalidId();
     error ProposalAlreadyExecuted();
-    
+
     constructor(address[] memory _owners, uint256 _threshold) {
         if (_owners.length == 0) {
             revert InvalidOwnerArray();
@@ -53,7 +55,7 @@ contract SharedWallet {
         }
         _;
     }
-    
+
     /// @notice Modifier to check if the proposal is already executed
     modifier isValidId(uint256 _id) {
         if (_id >= proposals.length) {
@@ -78,8 +80,7 @@ contract SharedWallet {
         _;
     }
     /// @notice Function to deposit ETH into the wallet
-    function deposit() public payable {       
-    }
+    function deposit() public payable {}
 
     /// @notice Function to propose a transaction
     function proposeTransaction(address _to, uint256 _amount, string memory _description) public onlyOwner {
@@ -104,12 +105,11 @@ contract SharedWallet {
         if (proposals[_id].approvalCount >= threshold && !proposals[_id].isExecuted) {
             require(address(this).balance >= proposals[_id].amount, "Insufficient balance");
             proposals[_id].isExecuted = true;
-            (bool success, ) = payable(proposals[_id].to).call{value: proposals[_id].amount}("");
+            (bool success,) = payable(proposals[_id].to).call{value: proposals[_id].amount}("");
             if (!success) {
                 revert TransactionFailed();
             }
             emit ProposalExecuted(_id, proposals[_id].to, proposals[_id].amount);
         }
     }
-    
 }
