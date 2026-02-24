@@ -7,6 +7,7 @@ contract SharedWallet {
     );
     event ProposalApproved(uint256 indexed id, address indexed approver);
     event ProposalExecuted(uint256 indexed id, address indexed to, uint256 amount);
+    event ApprovalRevoked(uint256 indexed id, address indexed approver);
 
     struct Proposal {
         uint256 amount;
@@ -19,6 +20,7 @@ contract SharedWallet {
     }
 
     mapping(address => bool) public isOwner;
+    address[] public owners;
     Proposal[] private proposals;
     uint256 private threshold;
 
@@ -27,6 +29,7 @@ contract SharedWallet {
     error NotOwner();
     error TransactionFailed();
     error AlreadyApproved();
+    error NotAlreadyApproved();
     error InvalidThreshold();
     error InvalidId();
     error ProposalAlreadyExecuted();
@@ -45,6 +48,7 @@ contract SharedWallet {
                 revert InvalidAddress();
             }
             isOwner[_owners[i]] = true;
+            owners.push(_owners[i]);
         }
         threshold = _threshold;
     }
@@ -69,6 +73,14 @@ contract SharedWallet {
     modifier notHasAlreadyApproved(uint256 _id) {
         if (proposals[_id].approvers[msg.sender] == true) {
             revert AlreadyApproved();
+        }
+        _;
+    }
+
+    /// @notice Modifier to check if the caller has not approved the proposal
+    modifier hasAlreadyApproved(uint256 _id) {
+        if (proposals[_id].approvers[msg.sender] == false) {
+            revert NotAlreadyApproved();
         }
         _;
     }
@@ -106,6 +118,14 @@ contract SharedWallet {
         p.approvers[msg.sender] = true;
         p.approvalCount++;
         emit ProposalApproved(_id, msg.sender);
+    }
+
+    /// @notice Function to revoke an approval
+    function revokeApproval(uint256 _id) public onlyOwner isValidId(_id) hasAlreadyApproved(_id) notExecuted(_id) {
+        Proposal storage p = proposals[_id];
+        p.approvers[msg.sender] = false;
+        p.approvalCount--;
+        emit ApprovalRevoked(_id, msg.sender);
     }
 
     /// @notice Function to execute a proposal
