@@ -9,7 +9,6 @@ contract SharedWallet {
     event ProposalExecuted(uint256 indexed id, address indexed to, uint256 amount);
 
     struct Proposal {
-        uint256 id;
         uint256 amount;
         address to;
         mapping(address => bool) approvers;
@@ -31,6 +30,8 @@ contract SharedWallet {
     error InvalidThreshold();
     error InvalidId();
     error ProposalAlreadyExecuted();
+    error InsufficientApproval();
+    error InsufficientBalanceInContract();
 
     constructor(address[] memory _owners, uint256 _threshold) {
         if (_owners.length == 0) {
@@ -84,32 +85,48 @@ contract SharedWallet {
 
     /// @notice Function to propose a transaction
     function proposeTransaction(address _to, uint256 _amount, string memory _description) public onlyOwner {
+        require(_to != address(0), "Invalid address");
+        require(_amount > 0, "Invalid amount");
+        require(bytes(_description).length > 0, "Invalid description");
         proposals.push();
         uint256 id = proposals.length - 1;
-
+        // Need to use storage to avoid copying the proposal to memory because of the mapping proposals.push(Proposal({...}));
         Proposal storage p = proposals[id];
         p.amount = _amount;
         p.to = _to;
         p.description = _description;
         p.proposer = msg.sender;
-        p.isExecuted = false;
-        p.approvalCount = 0;
-        emit ProposalCreated(proposals.length - 1, msg.sender, _to, _amount, _description);
+
+        emit ProposalCreated(id, msg.sender, _to, _amount, _description);
     }
 
     /// @notice Function to approve a proposal
     function approveProposal(uint256 _id) public onlyOwner isValidId(_id) notHasAlreadyApproved(_id) notExecuted(_id) {
-        proposals[_id].approvers[msg.sender] = true;
-        proposals[_id].approvalCount++;
+        Proposal storage p = proposals[_id];
+        p.approvers[msg.sender] = true;
+        p.approvalCount++;
         emit ProposalApproved(_id, msg.sender);
-        if (proposals[_id].approvalCount >= threshold && !proposals[_id].isExecuted) {
-            require(address(this).balance >= proposals[_id].amount, "Insufficient balance");
-            proposals[_id].isExecuted = true;
-            (bool success,) = payable(proposals[_id].to).call{value: proposals[_id].amount}("");
-            if (!success) {
-                revert TransactionFailed();
-            }
-            emit ProposalExecuted(_id, proposals[_id].to, proposals[_id].amount);
+    }
+
+    /// @notice Function to execute a proposal
+    function executeProposal(uint256 _id) public onlyOwner isValidId(_id) notExecuted(_id) {
+        Proposal storage p = proposals[_id];
+        if (p.approvalCount < threshold) {
+            revert InsufficientApproval();
         }
+        if (address(this).balance < p.amount) {
+            revert InsufficientBalanceInContract();
+        }
+        p.isExecuted = true;
+        (bool success,) = payable(p.to).call{value: p.amount}("");
+        if (!success) {
+            revert TransactionFailed();
+        }
+        emit ProposalExecuted(_id, p.to, p.amount);
+    }
+
+    /// @notice Function to get the balance of the contract
+    function getBalance() public view onlyOwner returns (uint256) {
+        return address(this).balance;
     }
 }
