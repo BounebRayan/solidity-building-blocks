@@ -2,12 +2,9 @@
 pragma solidity ^0.8.20;
 
 interface IERC721Receiver {
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external returns (bytes4);
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        returns (bytes4);
 }
 
 interface IERC165 {
@@ -15,7 +12,6 @@ interface IERC165 {
 }
 
 contract NFTScratch is IERC165 {
-
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
@@ -59,9 +55,9 @@ contract NFTScratch is IERC165 {
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return
-            interfaceId == 0x80ac58cd || // ERC721
-            interfaceId == 0x5b5e139f || // ERC721Metadata
-            interfaceId == 0x01ffc9a7;   // ERC165
+            interfaceId == 0x80ac58cd // ERC721
+                || interfaceId == 0x5b5e139f // ERC721Metadata
+                || interfaceId == 0x01ffc9a7; // ERC165
     }
 
     // ─── ERC721 Metadata ─────────────────────────────────────
@@ -154,18 +150,12 @@ contract NFTScratch is IERC165 {
 
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view tokenExists(tokenId) returns (bool) {
         address tokenOwner = _owners[tokenId];
-        return (spender == tokenOwner ||
-                _tokenApprovals[tokenId] == spender ||
-                _operatorApprovals[tokenOwner][spender]);
+        return (spender == tokenOwner || _tokenApprovals[tokenId] == spender || _operatorApprovals[tokenOwner][spender]);
     }
 
-    function _checkOnERC721Received(
-        address operator,
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) private {
+    function _checkOnERC721Received(address operator, address from, address to, uint256 tokenId, bytes memory data)
+        private
+    {
         if (to.code.length > 0) {
             try IERC721Receiver(to).onERC721Received(operator, from, tokenId, data) returns (bytes4 retval) {
                 if (retval != IERC721Receiver.onERC721Received.selector) {
